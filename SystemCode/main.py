@@ -1,10 +1,12 @@
 import time
 import grovepi
 import brickpi3
+import math
 
 
 from DriveTrain import DriveTrain
 from Manipulator import Manipulator
+
 
 BP = brickpi3.BrickPi3()
 
@@ -31,7 +33,9 @@ buttonNum = 0
 lastVal = False
 val = False
 
-# set up mag sensor
+# set up gyro
+
+
 magSensor = BP.PORT_3
 BP.set_sensor_type(magSensor, BP.SENSOR_TYPE.CUSTOM, [BP.SENSOR_CUSTOM.PIN1_ADC])
 
@@ -40,9 +44,10 @@ startTime = time.time()
 currTime = time.time()
 run = False
 status = "None"
-maxSpeed = 5.0
-minSpeed = 1
+maxSpeed = 10
+minSpeed = 6.5
 
+# get button value
 def getButton():
     try:
         return BP.get_sensor(touchSensor)
@@ -50,15 +55,8 @@ def getButton():
         print(error)
         return False
     
-def getMagVoltage():
-    try:
-        return BP.get_sensor(magSensor)[0] / (4095.0 / BP.get_voltage_5v())
-    except brickpi3.SensorError as error:
-        print(error)
-        return False
-    
 
-
+# line following command
 def lineFollow():
     if(grovepi.digitalRead(rightLine) == 0 and grovepi.digitalRead(leftLine) == 0):
         drive.setCM(maxSpeed,maxSpeed)
@@ -69,16 +67,7 @@ def lineFollow():
     else:
         drive.setCM(minSpeed,minSpeed)
 
-
-
-def dropCargo():
-    drive.setCM(0,0)
-    manipulator.setThreadSpeed(-0.5)
-    manipulator.setGatePosition(-1.25)
-    time.sleep(4)
-    manipulator.setThreadSpeed(0)
-    manipulator.setGatePosition(0)
-
+# drive a certain distance at a speed command
 def driveDistance(disCM, speed):
     startDist = drive.getLeftCM()
     currDist = drive.getLeftCM()
@@ -88,25 +77,41 @@ def driveDistance(disCM, speed):
         print(currDist - startDist)
     drive.setCM(0,0)
 
+# drop cargo command
+def dropCargo():
+    drive.setCM(0,0)
+    driveDistance(15,5)
+    manipulator.setThreadSpeed(-0.5)
+    manipulator.setGatePosition(1.25)
+    time.sleep(4)
+    manipulator.setThreadSpeed(0)
+    driveDistance(8,5)
+    manipulator.setGatePosition(0)
 
 
 # run program here
 try:
     time.sleep(1)
+    ##driveDistance(200,50)
+
     
-
+    driveDistance(65,5)
+    drive.setCM(10,-5)
+    time.sleep(1)
+    driveDistance(20,5)
+    dropCargo()
+    driveDistance(25,5)
+    
     while True:
-        """
-        val = getButton()
 
-        if(val == True and lastVal == False):
-            run = not run
         """
-        
-        print("Voltage:", getMagVoltage() * 100)
+        if(diff <= 1000000000):
+            lineFollow()
+        else:
+            dropCargo()
+        """
+        lineFollow()
 
-        time.sleep(0.02)       
-        lastVal = val
 
 except IOError as error:
     print(error)
