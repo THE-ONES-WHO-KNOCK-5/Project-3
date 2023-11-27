@@ -2,6 +2,7 @@ import time
 import grovepi
 import brickpi3
 import math
+from MPU9250 import MPU9250
 
 
 from DriveTrain import DriveTrain
@@ -33,6 +34,10 @@ lastVal = False
 val = False
 
 # set up gyro
+myIMU = MPU9250(0x68)
+angleList = []
+magList = []
+accelList = []
 
 # set up distance sensor
 ultrasonic_sensor_port = 4 # assign ultrasonic sensor port to D4
@@ -43,8 +48,11 @@ startTime = time.time()
 currTime = time.time()
 run = False
 status = "None"
-MAXSPEED = 10
+# 10 6.5
+MAXSPEED = 15
 MINSPEED = 6.5
+UPDATERATE = 0.05
+NUMSTORED = 5
 
 # get button value
 def getButton():
@@ -57,6 +65,36 @@ def getButton():
 def getDistance():
     dist = grovepi.ultrasonicRead(ultrasonic_sensor_port)
     return dist
+
+def updateGyro():
+    # updates magnetic sensor values
+    listVal = myIMU.readMagnet()
+    magMag = math.sqrt(listVal["x"]**2 + listVal["y"]**2 + listVal["z"]**2)
+    if magMag != 0.0:
+        magList.append(magMag) 
+        if len(magList) > NUMSTORED:
+            magList.pop(0)
+    
+    # gyro sensor values
+    gyroVal = myIMU.readGyro()
+    angleList.append(gyroVal) 
+    if len(gyroVal) > NUMSTORED:
+        angleList.pop(0)
+
+    # updates acceleration values
+    accelVal = myIMU.readAccel()
+    accelList.append(accelVal) 
+    if len(accelVal) > NUMSTORED:
+        accelList.pop(0)
+
+def getMagValue():
+    return sum(magList)/len(magList)
+
+def getMagChange():
+    return (magList[-1] - magList[0]) / (UPDATERATE * len(magList))
+
+def getGyroValue():
+    return {"x": angleList[-1]["x"], "y":angleList[-1]["y"], "z":angleList[-1]["z"]}
     
 
 # line following command
@@ -94,10 +132,11 @@ def dropCargo():
 # run program here
 try:
     time.sleep(1)
-    driveDistance(200,50)
     ##dropCargo()
+    updateGyro()
     
     while True:
+        print(angleList)
 
         """
         if(diff <= 1000000000):
@@ -105,6 +144,9 @@ try:
         else:
             dropCargo()
         """
+        updateGyro()
+        time.sleep(UPDATERATE)
+
 
 
 
