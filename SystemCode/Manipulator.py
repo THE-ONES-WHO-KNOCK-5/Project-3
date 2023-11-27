@@ -3,23 +3,26 @@ import math
 class Manipulator:
 
     BP = None
-    threadMotor = None
     gateMotor = None
+    gRatio = 40/8
+    mult = 0
 
-    def __init__(self, BP, threadMotor, gateMotor):
+    gateAngle = 70.5
+    wedgeAngle = 42.5
+
+    def __init__(self, BP, gateMotor, multiplier):
         self.BP = BP
-        self.threadMotor = threadMotor
         self.gateMotor = gateMotor
+        self.mult = multiplier
 
-    def setThreadSpeed(self, speedRot):
-        self.BP.set_motor_dps(self.threadMotor, speedRot *360)
+    # set angle of gate relative to the wedge
+    def setGateAngle(self, angle):
+        self.BP.set_motor_position(self.gateMotor, angle * self.gRatio * self.mult)
 
-    def setgateSpeed(self, speedRot):
-        self.BP.set_motor_dps(self.gateMotor, speedRot * 360)
+    # stop motor PID
+    def stopMotor(self):
+        self.BP.set_motor_dps(self.gateMotor, 0)
 
-    def setGatePosition(self, positionRot):
-        self.BP.set_motor_position(self.gateMotor, positionRot * 360)
-
+    # reset motor encoder
     def resetEncoders(self):
-        self.BP.offset_motor_encoder(self.threadMotor, self.BP.get_motor_encoder(self.threadMotor))
-        self.BP.offset_motor_encoder(self.gateMotor, self.BP.get_motor_encoder(self.gateMotor))
+        self.BP.offset_motor_encoder(self.gateMotor, self.BP.get_motor_encoder(self.gateMotor) + (self.gateAngle - self.wedgeAngle))

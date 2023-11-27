@@ -17,9 +17,8 @@ drive = DriveTrain(BP, leftMotor, rightMotor, 1, 1)
 drive.resetEncoders()
 
 # manipulator system
-threadMotor = BP.PORT_A
 gateMotor = BP.PORT_D
-manipulator = Manipulator(BP, threadMotor, gateMotor)
+manipulator = Manipulator(BP, gateMotor, -1)
 manipulator.resetEncoders()
 
 # set up line sensors
@@ -35,17 +34,17 @@ val = False
 
 # set up gyro
 
+# set up distance sensor
+ultrasonic_sensor_port = 4 # assign ultrasonic sensor port to D4
 
-magSensor = BP.PORT_3
-BP.set_sensor_type(magSensor, BP.SENSOR_TYPE.CUSTOM, [BP.SENSOR_CUSTOM.PIN1_ADC])
 
 # set up sys variables
 startTime = time.time()
 currTime = time.time()
 run = False
 status = "None"
-maxSpeed = 10
-minSpeed = 6.5
+MAXSPEED = 10
+MINSPEED = 6.5
 
 # get button value
 def getButton():
@@ -55,9 +54,13 @@ def getButton():
         print(error)
         return False
     
+def getDistance():
+    dist = grovepi.ultrasonicRead(ultrasonic_sensor_port)
+    return dist
+    
 
 # line following command
-def lineFollow():
+def lineFollow(maxSpeed, minSpeed):
     if(grovepi.digitalRead(rightLine) == 0 and grovepi.digitalRead(leftLine) == 0):
         drive.setCM(maxSpeed,maxSpeed)
     elif(grovepi.digitalRead(rightLine) == 0):
@@ -74,33 +77,25 @@ def driveDistance(disCM, speed):
     drive.setCM(speed,speed)
     while currDist - startDist <= disCM:
         currDist = drive.getLeftCM()
-        print(currDist - startDist)
     drive.setCM(0,0)
 
 # drop cargo command
 def dropCargo():
     drive.setCM(0,0)
-    driveDistance(15,5)
-    manipulator.setThreadSpeed(-0.5)
-    manipulator.setGatePosition(1.25)
+    manipulator.setGateAngle(180)
+    print("Dropping cargo")
     time.sleep(4)
-    manipulator.setThreadSpeed(0)
-    driveDistance(8,5)
-    manipulator.setGatePosition(0)
+    #driveDistance(8,5)
+    manipulator.setGateAngle(0)
+    print("closing cargo")
+    manipulator.stopMotor()
 
 
 # run program here
 try:
     time.sleep(1)
-    ##driveDistance(200,50)
-
-    
-    driveDistance(65,5)
-    drive.setCM(10,-5)
-    time.sleep(1)
-    driveDistance(20,5)
-    dropCargo()
-    driveDistance(25,5)
+    driveDistance(200,50)
+    ##dropCargo()
     
     while True:
 
@@ -110,7 +105,7 @@ try:
         else:
             dropCargo()
         """
-        lineFollow()
+
 
 
 except IOError as error:
