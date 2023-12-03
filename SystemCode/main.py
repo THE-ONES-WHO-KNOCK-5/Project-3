@@ -56,7 +56,6 @@ def getDistance():
 
 # line following command
 def lineFollow(maxSpeed, turnSpeed, turnRight):
-    print(grovepi.digitalRead(rightLine))
     if(grovepi.digitalRead(rightLine) == 0 and grovepi.digitalRead(leftLine) == 0):
         drive.setCM(maxSpeed,maxSpeed)
         print("Full Speed")
@@ -74,6 +73,13 @@ def lineFollow(maxSpeed, turnSpeed, turnRight):
             print("Finding Line")
     else:
         drive.setCM(maxSpeed,maxSpeed)
+
+def oneLineFollow(maxSpeed, turnSpeed):
+    if(grovepi.digitalRead(leftLine) == 1):
+        drive.setCM(maxSpeed,turnSpeed)
+        print("Turn Right")
+    else:
+        drive.setCM(turnSpeed,maxSpeed)
 
 # drive a certain distance at a speed command
 def driveDistance(disCM, speed):
@@ -99,7 +105,7 @@ def climbHill():
     drive.setCM(-MINSPEED, -MINSPEED)
     time.sleep(0.75)
     drive.setCM(TURBOSPEED, TURBOSPEED)
-    time.sleep(2)
+    time.sleep(4)
     
 
 # run program here
@@ -113,11 +119,11 @@ try:
     gatesNum = 0
     
     while True:
+        print("gate",gatesNum)
         if getDistance() < 7:
             drive.setCM(0,0)
         # TODO add support for gyro and climb
-        
-        elif (myGyro.getGyroValue()["x"] > 25):
+        elif(myGyro.getGyroValue()["x"] > 15):
             climbHill()
         else:
             # counting how many gates entered
@@ -125,7 +131,9 @@ try:
                 gatesNum = gatesNum + 1
 
             # if at correct site, turn right at next turn
-            if (gatesNum == 2 and state["state"] == 3) or gatesNum == state["site"]:
+            if gatesNum >= 5000:
+                oneLineFollow()
+            elif (gatesNum == 2 and state["state"] == 3) or gatesNum == state["site"]:
                 # if at drop of location, then drop cargo, and then move out
                 if (gatesNum == 3 and state["state"] == 3) or gatesNum == state["site"] + 1:
                     dropCargo()
@@ -133,7 +141,8 @@ try:
                 lineFollow(MAXSPEED,MINSPEED, True)
                 print("whatttt")
             else:
-                lineFollow(MAXSPEED,MINSPEED, True)
+                #oneLineFollow(MAXSPEED,MINSPEED * 0.75)
+                lineFollow(MAXSPEED,MINSPEED, False)
 
 
 
