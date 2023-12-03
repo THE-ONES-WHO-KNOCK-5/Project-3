@@ -8,6 +8,8 @@ import math
 from DriveTrain import DriveTrain
 from Manipulator import Manipulator
 from Gyroscope import Gyroscope
+from ColorSensor import ColorSensor
+
 
 
 # set up sys variables
@@ -16,12 +18,10 @@ currTime = time.time()
 run = False
 status = "None"
 # 10 6.5
-MAXSPEED = 20
-TURBOSPEED = 30
-MINSPEED = 15
+MAXSPEED = 15
+MINSPEED = 6.5
 UPDATERATE = 0.05
 NUMSTORED = 5
-gatesNum = 0
 BP = brickpi3.BrickPi3()
 
 #set up drive motors
@@ -32,10 +32,7 @@ drive.resetEncoders()
 
 # manipulator system
 gateMotor = BP.PORT_D
-climbMotor = BP.PORT_A
-manipulator = Manipulator(BP, gateMotor, climbMotor, -1, 1)
-GATEUP = 60
-GATEDOWN = 170
+manipulator = Manipulator(BP, gateMotor, BP.PORT_A, -1,1)
 manipulator.resetEncoders()
 
 # set up line sensors
@@ -43,31 +40,47 @@ leftLine = 8
 rightLine = 3
 
 # set up touch sensor
+touchSensor = BP.PORT_1
+BP.set_sensor_type(touchSensor, BP.SENSOR_TYPE.TOUCH)
+buttonNum = 0
+lastVal = False
+val = False
 
 # set up gyro
 myGyro = Gyroscope(NUMSTORED, UPDATERATE)
 
+# set up Color Sensor
+cSensor = ColorSensor(BP, BP.PORT_3)
+
 # set up distance sensor
 ultrasonic_sensor_port = 4 # assign ultrasonic sensor port to D4
 
+# get button value
+def getButton():
+    try:
+        return BP.get_sensor(touchSensor)
+    except brickpi3.SensorError as error:
+        print(error)
+        return False
+    
 def getDistance():
     dist = grovepi.ultrasonicRead(ultrasonic_sensor_port)
     return dist
     
 
 # line following command
-def lineFollow(maxSpeed, turnSpeed, turnRight):
+def lineFollow(maxSpeed, minSpeed, turnRight):
     if(grovepi.digitalRead(rightLine) == 0 and grovepi.digitalRead(leftLine) == 0):
         drive.setCM(maxSpeed,maxSpeed)
-        print("Full Speed")
     elif(grovepi.digitalRead(rightLine) == 0):
-        drive.setCM(turnSpeed,-turnSpeed)
+        drive.setCM(maxSpeed,-minSpeed)
     elif(grovepi.digitalRead(leftLine) == 0):
-        drive.setCM(-turnSpeed,turnSpeed)
+        drive.setCM(-minSpeed,maxSpeed)
     elif turnRight:
-        drive.setCM(maxSpeed,turnSpeed)
+        drive.setCM(maxSpeed,-minSpeed)
+
     else:
-        drive.setCM(maxSpeed,maxSpeed)
+        drive.setCM(minSpeed,minSpeed)
 
 # drive a certain distance at a speed command
 def driveDistance(disCM, speed):
@@ -82,54 +95,33 @@ def driveDistance(disCM, speed):
 
 # drop cargo command
 def dropCargo():
-    driveDistance(10, 5)
-    manipulator.setGateAngle(GATEDOWN)
+    drive.setCM(0,0)
+    manipulator.setGateAngle(180)
     print("Dropping cargo")
-    time.sleep(2)
-    manipulator.setGateAngle(GATEUP)
+    time.sleep(4)
+    #driveDistance(8,5)
+    manipulator.setGateAngle(0)
     print("closing cargo")
+    manipulator.stopMotor()
 
-def climbHill():
-    drive.setCM(TURBOSPEED, TURBOSPEED)
-    time.sleep(.5)
-    
 
 # run program here
 try:
-    time.sleep(1)
+    manipulator.setGateAngle(60)
+    time.sleep(5)
     myGyro.updateGyro()
-    manipulator.setGateAngle(GATEUP)
-
-    site = input("Enter Site Location: ")
-    state = {"state": "start", "site": site}
-    gatesNum = 0
+    ##dropCargo()
     
     while True:
-        if getDistance() < 7:
-            drive.setCM(0,0)
-        # TODO add support for gyro and climb
-        
-        elif (myGyro.getGyroValue()["x"] > 25):
-            climbHill()
+        drive.setCM(15,15)
+        """
+        if(diff <= 1000000000):
+            lineFollow()
         else:
-            # counting how many gates entered
-            if myGyro.isEnterGate():
-                gatesNum = gatesNum + 1
-
-            # if at correct site, turn right at next turn
-            if (gatesNum == 2 and state["state"] == 3) or gatesNum == state["site"]:
-                # if at drop of location, then drop cargo, and then move out
-                if (gatesNum == 3 and state["state"] == 3) or gatesNum == state["site"] + 1:
-                    dropCargo()
-                    gatesNum += 5000
-                lineFollow(MAXSPEED,MINSPEED, True)
-                print("whatttt")
-            else:
-                lineFollow(MAXSPEED,MINSPEED, False)
-
-
-
+            dropCargo()
+        """
         myGyro.updateGyro()
+        cSensor.update()
         time.sleep(UPDATERATE)
 
 
