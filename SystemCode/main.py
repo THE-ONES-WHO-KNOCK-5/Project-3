@@ -16,9 +16,9 @@ currTime = time.time()
 run = False
 status = "None"
 # 10 6.5
-MAXSPEED = 20
-TURBOSPEED = 30
-MINSPEED = 15
+MAXSPEED = 15
+TURBOSPEED = 25
+MINSPEED = 10
 UPDATERATE = 0.05
 NUMSTORED = 5
 gatesNum = 0
@@ -32,9 +32,8 @@ drive.resetEncoders()
 
 # manipulator system
 gateMotor = BP.PORT_D
-climbMotor = BP.PORT_A
-manipulator = Manipulator(BP, gateMotor, climbMotor, -1, 1)
-GATEUP = 60
+manipulator = Manipulator(BP, gateMotor, -1)
+GATEUP = 50
 GATEDOWN = 170
 manipulator.resetEncoders()
 
@@ -57,6 +56,7 @@ def getDistance():
 
 # line following command
 def lineFollow(maxSpeed, turnSpeed, turnRight):
+    print(grovepi.digitalRead(rightLine))
     if(grovepi.digitalRead(rightLine) == 0 and grovepi.digitalRead(leftLine) == 0):
         drive.setCM(maxSpeed,maxSpeed)
         print("Full Speed")
@@ -65,7 +65,13 @@ def lineFollow(maxSpeed, turnSpeed, turnRight):
     elif(grovepi.digitalRead(leftLine) == 0):
         drive.setCM(-turnSpeed,turnSpeed)
     elif turnRight:
-        drive.setCM(maxSpeed,turnSpeed)
+        drive.setCM(-turnSpeed,turnSpeed)
+        time.sleep(0.5)
+        drive.setCM(maxSpeed,maxSpeed)
+        time.sleep(1.1)
+        drive.setCM(turnSpeed, -turnSpeed)
+        while(grovepi.digitalRead(rightLine) == 0):
+            print("Finding Line")
     else:
         drive.setCM(maxSpeed,maxSpeed)
 
@@ -90,8 +96,10 @@ def dropCargo():
     print("closing cargo")
 
 def climbHill():
+    drive.setCM(-MINSPEED, -MINSPEED)
+    time.sleep(0.75)
     drive.setCM(TURBOSPEED, TURBOSPEED)
-    time.sleep(.5)
+    time.sleep(2)
     
 
 # run program here
@@ -125,7 +133,7 @@ try:
                 lineFollow(MAXSPEED,MINSPEED, True)
                 print("whatttt")
             else:
-                lineFollow(MAXSPEED,MINSPEED, False)
+                lineFollow(MAXSPEED,MINSPEED, True)
 
 
 

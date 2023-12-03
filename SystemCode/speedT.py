@@ -32,7 +32,7 @@ drive.resetEncoders()
 
 # manipulator system
 gateMotor = BP.PORT_D
-manipulator = Manipulator(BP, gateMotor, BP.PORT_A, -1,1)
+manipulator = Manipulator(BP, gateMotor, -1)
 manipulator.resetEncoders()
 
 # set up line sensors
