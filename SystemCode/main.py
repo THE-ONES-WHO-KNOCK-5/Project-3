@@ -8,6 +8,7 @@ import math
 from DriveTrain import DriveTrain
 from Manipulator import Manipulator
 from Gyroscope import Gyroscope
+from Timer import Timer
 
 
 # set up sys variables
@@ -74,7 +75,7 @@ def lineFollow(maxSpeed, turnSpeed, turnRight):
     else:
         drive.setCM(maxSpeed,maxSpeed)
 
-def oneLineFollow(maxSpeed, turnSpeed):
+def leftEdgeFollow(maxSpeed, turnSpeed):
     if(grovepi.digitalRead(leftLine) == 1):
         drive.setCM(maxSpeed,turnSpeed)
         print("Turn Right")
@@ -91,6 +92,33 @@ def driveDistance(disCM, speed):
         myGyro.updateGyro()
         time.sleep(UPDATERATE)
     drive.setCM(0,0)
+
+def turnAngle(angle):
+    currAngle = 0
+    diff = angle - currAngle
+    mult = math.copysign(1, diff)
+    while(abs(angle) > abs(currAngle)):
+        currAngle = currAngle - (myGyro.getGyroValue()["z"] * UPDATERATE)
+        drive.setCM(MINSPEED / 4 * mult, -MINSPEED / 4 * mult)
+        myGyro.updateGyro()
+        print("running", currAngle)
+    print("done")
+    drive.setCM(0, 0)
+
+# 0.5 second and 1 mult will turn 45 degrees
+def turnTime(sec, mult):
+    drive.setCM(MINSPEED * mult, -MINSPEED * mult)
+    time.sleep(sec)
+    drive.setCM(0, 0)
+
+def findLine():
+    turnTime(1,-1)
+    timer = Timer(7)
+    drive.setCM(MINSPEED/4, -MINSPEED/4)
+    while(grovepi.digitalRead(rightLine) == 1 and (not timer.isTime())):
+        time.sleep(UPDATERATE)
+
+    drive.setCM(0, 0)
 
 # drop cargo command
 def dropCargo():
@@ -114,12 +142,14 @@ try:
     myGyro.updateGyro()
     manipulator.setGateAngle(GATEUP)
 
-    site = input("Enter Site Location: ")
+    site = int(input("Enter Site Location: "))
     state = {"state": "start", "site": site}
     gatesNum = 0
+
+    findLine()
+    time.sleep(100)
     
     while True:
-        print("gate",gatesNum)
         if getDistance() < 7:
             drive.setCM(0,0)
         # TODO add support for gyro and climb
@@ -132,7 +162,7 @@ try:
 
             # if at correct site, turn right at next turn
             if gatesNum >= 5000:
-                oneLineFollow()
+                leftEdgeFollow(MAXSPEED,MINSPEED * 0.75)
             elif (gatesNum == 2 and state["state"] == 3) or gatesNum == state["site"]:
                 # if at drop of location, then drop cargo, and then move out
                 if (gatesNum == 3 and state["state"] == 3) or gatesNum == state["site"] + 1:
@@ -141,7 +171,7 @@ try:
                 lineFollow(MAXSPEED,MINSPEED, True)
                 print("whatttt")
             else:
-                #oneLineFollow(MAXSPEED,MINSPEED * 0.75)
+                #leftEdgeFollow(MAXSPEED,MINSPEED * 0.75)
                 lineFollow(MAXSPEED,MINSPEED, False)
 
 

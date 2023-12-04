@@ -60,6 +60,6 @@ class Gyroscope():
 
     def getGyroValue(self):
         return {"x": self.angleList[-1]["x"], "y": self.angleList[-1]["y"], "z": self.angleList[-1]["z"]}
-    
+
     def isEnterGate(self):
         return self.gateList[-1] == True and self.gateList[-2] == False
