@@ -18,12 +18,14 @@ run = False
 status = "None"
 # 10 6.5
 MAXSPEED = 15
-TURBOSPEED = 25
+TURBOSPEED = 30
 MINSPEED = 10
 UPDATERATE = 0.05
 NUMSTORED = 5
 gatesNum = 0
 BP = brickpi3.BrickPi3()
+climbCounter = 0
+gateFlag = True
 
 #set up drive motors
 rightMotor = BP.PORT_B
@@ -59,7 +61,6 @@ def getDistance():
 def lineFollow(maxSpeed, turnSpeed, turnRight):
     if(grovepi.digitalRead(rightLine) == 0 and grovepi.digitalRead(leftLine) == 0):
         drive.setCM(maxSpeed,maxSpeed)
-        print("Full Speed")
     elif(grovepi.digitalRead(rightLine) == 0):
         drive.setCM(turnSpeed,-turnSpeed)
     elif(grovepi.digitalRead(leftLine) == 0):
@@ -75,12 +76,29 @@ def lineFollow(maxSpeed, turnSpeed, turnRight):
     else:
         drive.setCM(maxSpeed,maxSpeed)
 
-def leftEdgeFollow(maxSpeed, turnSpeed):
-    if(grovepi.digitalRead(leftLine) == 1):
-        drive.setCM(maxSpeed,turnSpeed)
-        print("Turn Right")
+def edgeFollow(maxSpeed, turnSpeed, isWeight, isLeft):
+    if isLeft:
+        if(grovepi.digitalRead(leftLine) == 1):
+            if isWeight:
+                drive.setCM(20,-20/4)
+            else:
+                drive.setCM(maxSpeed,-turnSpeed)
+        else:
+            if isWeight:
+                drive.setCM(-20/5,20)
+            else:
+                drive.setCM(turnSpeed,maxSpeed)
     else:
-        drive.setCM(turnSpeed,maxSpeed)
+        if(grovepi.digitalRead(rightLine) == 1):
+            if isWeight:
+                drive.setCM(-20/4,20)
+            else:
+                drive.setCM(-turnSpeed,maxSpeed)
+        else:
+            if isWeight:
+                drive.setCM(20,-20/5)
+            else:
+                drive.setCM(maxSpeed,turnSpeed)
 
 # drive a certain distance at a speed command
 def driveDistance(disCM, speed):
@@ -101,8 +119,6 @@ def turnAngle(angle):
         currAngle = currAngle - (myGyro.getGyroValue()["z"] * UPDATERATE)
         drive.setCM(MINSPEED / 4 * mult, -MINSPEED / 4 * mult)
         myGyro.updateGyro()
-        print("running", currAngle)
-    print("done")
     drive.setCM(0, 0)
 
 # 0.5 second and 1 mult will turn 45 degrees
@@ -111,29 +127,38 @@ def turnTime(sec, mult):
     time.sleep(sec)
     drive.setCM(0, 0)
 
-def findLine():
-    turnTime(1,-1)
-    timer = Timer(7)
-    drive.setCM(MINSPEED/4, -MINSPEED/4)
-    while(grovepi.digitalRead(rightLine) == 1 and (not timer.isTime())):
+def findLine(turn):
+    if turn:
+        turnTime(1,-1)
+        timer = Timer(7)
+    else:
+        timer = Timer(1)
+    drive.setCM(MINSPEED, -MINSPEED)
+    while(grovepi.digitalRead(rightLine) == 0):
+        if(timer.isTime()):
+            drive.setCM(MINSPEED/1.5, MINSPEED/1.5)
         time.sleep(UPDATERATE)
-
     drive.setCM(0, 0)
 
 # drop cargo command
 def dropCargo():
-    driveDistance(10, 5)
+    driveDistance(15, 5)
     manipulator.setGateAngle(GATEDOWN)
     print("Dropping cargo")
-    time.sleep(2)
+    time.sleep(1.5)
     manipulator.setGateAngle(GATEUP)
     print("closing cargo")
+    drive.setCM(0, 0)
 
-def climbHill():
+def climbHill(ifHill):
     drive.setCM(-MINSPEED, -MINSPEED)
     time.sleep(0.75)
     drive.setCM(TURBOSPEED, TURBOSPEED)
-    time.sleep(4)
+    if ifHill:
+        time.sleep(4.35)
+    else:
+        time.sleep(1.5)
+    drive.setCM(0,0)
     
 
 # run program here
@@ -146,15 +171,23 @@ try:
     state = {"state": "start", "site": site}
     gatesNum = 0
 
-    findLine()
-    time.sleep(100)
+    """
+    while True:
+        leftEdgeFollow(MAXSPEED,MINSPEED * 0.75, True)
+        myGyro.updateGyro()
+        time.sleep(UPDATERATE)
+    """
     
     while True:
+        doneClimb = climbCounter <= -5#1
+        print("Gate",gatesNum)
         if getDistance() < 7:
             drive.setCM(0,0)
         # TODO add support for gyro and climb
-        elif(myGyro.getGyroValue()["x"] > 15):
-            climbHill()
+        elif(myGyro.getGyroValue()["x"] > 10 and doneClimb):
+            climbHill(climbCounter != 0)
+            findLine(False)
+            climbCounter += 1
         else:
             # counting how many gates entered
             if myGyro.isEnterGate():
@@ -162,19 +195,28 @@ try:
 
             # if at correct site, turn right at next turn
             if gatesNum >= 5000:
-                leftEdgeFollow(MAXSPEED,MINSPEED * 0.75)
-            elif (gatesNum == 2 and state["state"] == 3) or gatesNum == state["site"]:
+                edgeFollow(MAXSPEED,MINSPEED * 0.75, False, True)
+            elif (gatesNum == 2 and state["site"] == 3) or gatesNum == state["site"]:
                 # if at drop of location, then drop cargo, and then move out
-                if (gatesNum == 3 and state["state"] == 3) or gatesNum == state["site"] + 1:
+                if (gatesNum == 2 and state["site"] == 3):
+                    gateFlag = False
+                    
+                if gateFlag:
+                    findLine(True)
+                    gateFlag = False
+
+                if gatesNum == 3:
                     dropCargo()
                     gatesNum += 5000
-                lineFollow(MAXSPEED,MINSPEED, True)
-                print("whatttt")
-            else:
-                #leftEdgeFollow(MAXSPEED,MINSPEED * 0.75)
+
                 lineFollow(MAXSPEED,MINSPEED, False)
-
-
+            elif gatesNum == state["site"] + 1:
+                dropCargo()
+                gatesNum += 5000
+            elif not doneClimb:
+                edgeFollow(MAXSPEED,MINSPEED * 0.75, True, True)
+            else:
+                lineFollow(MAXSPEED,MINSPEED, False)
 
         myGyro.updateGyro()
         time.sleep(UPDATERATE)

@@ -107,22 +107,10 @@ def dropCargo():
 
 # run program here
 try:
-    manipulator.setGateAngle(60)
     time.sleep(5)
-    myGyro.updateGyro()
     ##dropCargo()
-    
-    while True:
-        drive.setCM(15,15)
-        """
-        if(diff <= 1000000000):
-            lineFollow()
-        else:
-            dropCargo()
-        """
-        myGyro.updateGyro()
-        cSensor.update()
-        time.sleep(UPDATERATE)
+    speed = 30
+    driveDistance(250 , speed)
 
 
 
