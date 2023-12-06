@@ -142,7 +142,7 @@ def findLine(turn):
 
 # drop cargo command
 def dropCargo():
-    driveDistance(15, 5)
+    driveDistance(35, 5)
     manipulator.setGateAngle(GATEDOWN)
     print("Dropping cargo")
     time.sleep(1.5)
@@ -179,7 +179,7 @@ try:
     """
     
     while True:
-        doneClimb = climbCounter <= -5#1
+        doneClimb = climbCounter <= 1
         print("Gate",gatesNum)
         if getDistance() < 7:
             drive.setCM(0,0)
@@ -200,16 +200,21 @@ try:
                 # if at drop of location, then drop cargo, and then move out
                 if (gatesNum == 2 and state["site"] == 3):
                     gateFlag = False
+                    turnTime(1,1)
+                    drive.setCM(15,15)
                     
                 if gateFlag:
-                    findLine(True)
                     gateFlag = False
 
                 if gatesNum == 3:
                     dropCargo()
                     gatesNum += 5000
 
-                lineFollow(MAXSPEED,MINSPEED, False)
+                
+                if not gateFlag:
+                    lineFollow(MAXSPEED,MINSPEED, False)
+                else:
+                    edgeFollow(MAXSPEED,MINSPEED * 0.75, True, False)
             elif gatesNum == state["site"] + 1:
                 dropCargo()
                 gatesNum += 5000

@@ -55,13 +55,6 @@ cSensor = ColorSensor(BP, BP.PORT_3)
 # set up distance sensor
 ultrasonic_sensor_port = 4 # assign ultrasonic sensor port to D4
 
-# get button value
-def getButton():
-    try:
-        return BP.get_sensor(touchSensor)
-    except brickpi3.SensorError as error:
-        print(error)
-        return False
     
 def getDistance():
     dist = grovepi.ultrasonicRead(ultrasonic_sensor_port)
@@ -89,6 +82,7 @@ def driveDistance(disCM, speed):
     drive.setCM(speed,speed)
     while currDist - startDist <= disCM:
         currDist = drive.getLeftCM()
+        print(currDist - startDist)
         myGyro.updateGyro()
         time.sleep(UPDATERATE)
     drive.setCM(0,0)
@@ -109,8 +103,8 @@ def dropCargo():
 try:
     time.sleep(5)
     ##dropCargo()
-    speed = 30
-    driveDistance(250 , speed)
+    speed = float(input("speed: "))
+    driveDistance(255/ 0.93, speed + (0.07 * 30))
 
 
 
