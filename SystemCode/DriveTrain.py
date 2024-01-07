@@ -24,6 +24,10 @@ class DriveTrain:
         self.BP.set_motor_dps(self.mPortL, self.leftMult * CMLeft / self.degreeToCM * self.gRatio)
         self.BP.set_motor_dps(self.mPortR, self.rightMult * CMRight / self.degreeToCM * self.gRatio)
 
+    def setPower(self, left, right):
+        self.BP.set_motor_power(self.mPortL, left)
+        self.BP.set_motor_power(self.mPortR, right)
+
     def resetEncoders(self):
         self.BP.offset_motor_encoder(self.mPortL, self.BP.get_motor_encoder(self.mPortL))
         self.BP.offset_motor_encoder(self.mPortR, self.BP.get_motor_encoder(self.mPortR))
